@@ -1,0 +1,15 @@
+# secrets and local config
+server/.env
+CLAUDE.local.md
+
+# python
+server/.venv/
+__pycache__/
+
+# android
+android/tools/wake-clips/
+*.apk
+
+# misc
+.DS_Store
+health*/

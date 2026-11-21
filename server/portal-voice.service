@@ -1,0 +1,16 @@
+# Template: ./setup.sh --systemd fills in __USER__ and __DIR__ and installs it.
+[Unit]
+Description=portal-voice: speech bridge (Whisper -> Hermes API -> edge-tts) for the Meta Portal
+After=network-online.target hermes-gateway.service
+Wants=network-online.target
+
+[Service]
+User=__USER__
+WorkingDirectory=__DIR__
+ExecStart=__DIR__/.venv/bin/python __DIR__/app.py
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

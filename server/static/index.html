@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#0e1116">
+<title>Hermes Voice</title>
+<style>
+  :root {
+    --bg: #0e1116; --panel: #161b22; --text: #e6edf3; --muted: #8b949e;
+    --accent: #3fb6a8; --listen: #e5534b; --think: #d29922; --speak: #57ab5a;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
+  body { display: flex; flex-direction: column; }
+  header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; }
+  header h1 { font-size: 20px; font-weight: 600; margin: 0; letter-spacing: .02em; }
+  header .actions button { background: var(--panel); color: var(--muted); border: 1px solid #30363d;
+    border-radius: 10px; padding: 10px 16px; font-size: 16px; margin-left: 8px; }
+  main { flex: 1; display: flex; gap: 24px; padding: 0 24px 16px; min-height: 0; }
+  #stage { flex: 0 0 42%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  #talk { width: 260px; height: 260px; border-radius: 50%; border: none; color: #fff; font-size: 26px;
+    font-weight: 600; background: var(--accent); box-shadow: 0 0 0 0 rgba(63,182,168,.5);
+    transition: background .2s, transform .1s; position: relative; }
+  #talk:active { transform: scale(.97); }
+  #talk.listening { background: var(--listen); animation: pulse 1.4s infinite; }
+  #talk.thinking { background: var(--think); }
+  #talk.speaking { background: var(--speak); }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(229,83,75,.55); } 100% { box-shadow: 0 0 0 40px rgba(229,83,75,0); } }
+  #meter { width: 220px; height: 8px; background: var(--panel); border-radius: 4px; margin-top: 28px; overflow: hidden; }
+  #meter div { height: 100%; width: 0; background: var(--listen); transition: width .05s; }
+  #status { margin-top: 16px; color: var(--muted); font-size: 18px; min-height: 24px; text-align: center; }
+  #log { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding: 8px 4px; }
+  .msg { max-width: 92%; padding: 14px 18px; border-radius: 16px; font-size: 22px; line-height: 1.35; }
+  .me { align-self: flex-end; background: #1f6feb33; border: 1px solid #1f6feb55; }
+  .bot { align-self: flex-start; background: var(--panel); border: 1px solid #30363d; }
+  .err { align-self: center; color: var(--listen); font-size: 16px; }
+  #empty { color: var(--muted); font-size: 20px; margin: auto; text-align: center; }
+  form { display: flex; gap: 8px; padding: 0 24px 18px; }
+  form input { flex: 1; background: var(--panel); color: var(--text); border: 1px solid #30363d;
+    border-radius: 10px; padding: 12px 14px; font-size: 18px; }
+  form button { background: var(--panel); color: var(--text); border: 1px solid #30363d; border-radius: 10px;
+    padding: 0 18px; font-size: 18px; }
+  #setup { position: fixed; inset: 0; background: var(--bg); display: none; flex-direction: column;
+    align-items: center; justify-content: center; gap: 14px; padding: 24px; }
+  #setup input { width: min(520px, 100%); background: var(--panel); color: var(--text); border: 1px solid #30363d;
+    border-radius: 10px; padding: 14px; font-size: 18px; }
+  #setup button { background: var(--accent); color: #fff; border: none; border-radius: 10px; padding: 14px 28px; font-size: 18px; }
+  @media (max-width: 760px) {
+    main { flex-direction: column; }
+    #stage { flex: 0 0 auto; padding: 8px 0; }
+    #talk { width: 180px; height: 180px; font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Hermes</h1>
+  <div class="actions">
+    <button id="newConv" type="button">New conversation</button>
+  </div>
+</header>
+<main>
+  <section id="stage">
+    <button id="talk" type="button">Tap to talk</button>
+    <div id="meter"><div></div></div>
+    <div id="status">&nbsp;</div>
+  </section>
+  <section id="log"><div id="empty">Tap the button and ask Hermes anything.</div></section>
+</main>
+<form id="typeForm" autocomplete="off">
+  <input id="typed" placeholder="…or type a message" enterkeyhint="send">
+  <button type="submit">Send</button>
+</form>
+<div id="setup">
+  <div style="font-size:22px">Enter the Portal voice key</div>
+  <input id="keyInput" type="password" placeholder="PORTAL_VOICE_KEY">
+  <button id="keySave" type="button">Save</button>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var BASE = location.pathname.replace(/\/?$/, "/"); // /voice/
+  var LS = {
+    get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set: function (k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} }
+  };
+
+  // Key: from #key=... once (then stripped from the URL), else localStorage, else prompt.
+  var m = /[#&]key=([^&]+)/.exec(location.hash);
+  if (m) { LS.set("pv_key", decodeURIComponent(m[1])); history.replaceState(null, "", location.pathname); }
+  var KEY = LS.get("pv_key");
+  var sessionId = LS.get("pv_session");
+
+  var talk = document.getElementById("talk");
+  var statusEl = document.getElementById("status");
+  var meterBar = document.querySelector("#meter div");
+  var logEl = document.getElementById("log");
+  var setup = document.getElementById("setup");
+
+  if (!KEY) setup.style.display = "flex";
+  document.getElementById("keySave").onclick = function () {
+    var v = document.getElementById("keyInput").value.trim();
+    if (!v) return;
+    KEY = v; LS.set("pv_key", v); setup.style.display = "none";
+  };
+
+  var state = "idle"; // idle | listening | thinking | speaking
+  function setState(s, msg) {
+    state = s;
+    talk.className = s === "idle" ? "" : s;
+    talk.textContent = { idle: "Tap to talk", listening: "Listening…", thinking: "Thinking…", speaking: "Tap to stop" }[s];
+    statusEl.innerHTML = msg || "&nbsp;";
+    if (s !== "listening") meterBar.style.width = "0";
+  }
+
+  function addMsg(cls, text) {
+    var empty = document.getElementById("empty");
+    if (empty) empty.remove();
+    var d = document.createElement("div");
+    d.className = "msg " + cls;
+    d.textContent = text;
+    logEl.appendChild(d);
+    while (logEl.children.length > 30) logEl.removeChild(logEl.firstChild);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  // ---- audio out ----
+  var player = new Audio();
+  player.onended = function () { if (state === "speaking") setState("idle"); };
+  function unlockAudio() {
+    // Play a silent clip inside the user gesture so later replies may autoplay.
+    try {
+      player.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=";
+      var p = player.play(); if (p && p.catch) p.catch(function () {});
+    } catch (e) {}
+  }
+
+  // ---- mic in ----
+  var stream = null, ctx = null, analyser = null, buf = null;
+  function ensureMic() {
+    if (stream) return Promise.resolve();
+    return navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 }
+    }).then(function (s) {
+      stream = s;
+      var AC = window.AudioContext || window.webkitAudioContext;
+      ctx = new AC();
+      var src = ctx.createMediaStreamSource(s);
+      analyser = ctx.createAnalyser();
+      analyser.fftSize = 1024;
+      buf = new Float32Array(analyser.fftSize);
+      src.connect(analyser);
+    });
+  }
+  function level() {
+    analyser.getFloatTimeDomainData(buf);
+    var sum = 0;
+    for (var i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+    return Math.sqrt(sum / buf.length);
+  }
+
+  // Simple energy VAD: wait for speech, then stop after a pause.
+  var SPEECH_RMS = 0.025, SILENCE_MS = 1300, NO_SPEECH_MS = 7000, MAX_MS = 30000;
+  var recorder = null, chunks = [], vadTimer = null;
+
+  function pickMime() {
+    var opts = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mp4"];
+    for (var i = 0; i < opts.length; i++) if (window.MediaRecorder && MediaRecorder.isTypeSupported(opts[i])) return opts[i];
+    return "";
+  }
+
+  function startListening() {
+    ensureMic().then(function () {
+      if (ctx.state === "suspended") ctx.resume();
+      chunks = [];
+      var mime = pickMime();
+      recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+      recorder.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+      recorder.onstop = function () { onRecorded(new Blob(chunks, { type: recorder.mimeType || "audio/webm" })); };
+      recorder.start(250);
+      setState("listening", "Go ahead…");
+      var started = Date.now(), heard = false, lastLoud = Date.now();
+      vadTimer = setInterval(function () {
+        var l = level(), now = Date.now();
+        meterBar.style.width = Math.min(100, l * 900) + "%";
+        if (l > SPEECH_RMS) { heard = true; lastLoud = now; }
+        if (heard && now - lastLoud > SILENCE_MS) stopListening(true);
+        else if (!heard && now - started > NO_SPEECH_MS) stopListening(false);
+        else if (now - started > MAX_MS) stopListening(true);
+      }, 50);
+    }).catch(function (e) {
+      setState("idle", "Microphone unavailable: " + (e && e.name ? e.name : e));
+    });
+  }
+
+  var sendAfterStop = true;
+  function stopListening(send) {
+    clearInterval(vadTimer); vadTimer = null;
+    sendAfterStop = send;
+    if (recorder && recorder.state !== "inactive") recorder.stop();
+  }
+
+  function onRecorded(blob) {
+    if (!sendAfterStop) { setState("idle", "Didn’t hear anything."); return; }
+    var ext = /ogg/.test(blob.type) ? ".ogg" : /mp4/.test(blob.type) ? ".m4a" : ".webm";
+    var fd = new FormData();
+    fd.append("audio", blob, "speech" + ext);
+    if (sessionId) fd.append("session_id", sessionId);
+    send("turn", { method: "POST", body: fd });
+  }
+
+  function sendText(text) {
+    addMsg("me", text);
+    send("text", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: text, session_id: sessionId || null })
+    }, true);
+  }
+
+  var convGen = 0;  // bumped by "New conversation"; replies from an older one are dropped
+  function send(path, init, typed) {
+    var gen = convGen;
+    setState("thinking", "Thinking…");
+    init.headers = init.headers || {};
+    init.headers["Authorization"] = "Bearer " + KEY;
+    fetch(BASE + path, init).then(function (r) {
+      if (r.status === 401) { LS.set("pv_key", null); KEY = null; setup.style.display = "flex"; throw new Error("Key rejected"); }
+      if (!r.ok) throw new Error("Server error " + r.status);
+      return r.json();
+    }).then(function (d) {
+      if (gen !== convGen) return;
+      if (d.session_id) { sessionId = d.session_id; LS.set("pv_session", sessionId); }
+      if (!d.transcript) { setState("idle", "Didn’t catch that."); return; }
+      if (!typed) addMsg("me", d.transcript);
+      addMsg("bot", d.reply || "(no reply)");
+      var t = d.timings || {};
+      var info = ["stt", "hermes", "tts"].filter(function (k) { return t[k] != null; })
+        .map(function (k) { return k + " " + t[k] + "s"; }).join(" · ");
+      if (d.audio_b64) {
+        player.src = "data:audio/mpeg;base64," + d.audio_b64;
+        setState("speaking", info);
+        var p = player.play();
+        if (p && p.catch) p.catch(function () { setState("idle", info); });
+      } else {
+        setState("idle", info);
+      }
+    }).catch(function (e) {
+      if (gen !== convGen) return;
+      addMsg("err", e.message || String(e));
+      setState("idle");
+    });
+  }
+
+  var fsTried = false;
+  talk.addEventListener("click", function () {
+    if (!fsTried) {
+      fsTried = true;
+      var el = document.documentElement;
+      var fs = el.requestFullscreen || el.webkitRequestFullscreen;
+      if (fs) try { var p = fs.call(el); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+    }
+    if (!KEY) { setup.style.display = "flex"; return; }
+    if (state === "idle") { unlockAudio(); startListening(); }
+    else if (state === "listening") stopListening(true);
+    else if (state === "speaking") { player.pause(); setState("idle"); }
+  });
+
+  document.getElementById("typeForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var inp = document.getElementById("typed");
+    var v = inp.value.trim();
+    if (!v || !KEY || state === "thinking") return;
+    inp.value = "";
+    inp.blur();
+    unlockAudio();
+    sendText(v);
+  });
+
+  document.getElementById("newConv").onclick = function () {
+    convGen++;
+    sessionId = null; LS.set("pv_session", null);
+    logEl.innerHTML = '<div id="empty">New conversation. Tap to talk.</div>';
+    if (state === "speaking") player.pause();
+    setState("idle");
+  };
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Hermes Display</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body data-theme="day" data-mode="ambient">
+
+<div id="aura" aria-hidden="true"><i class="a1"></i><i class="a2"></i><i class="a3"></i></div>
+<canvas id="dither" aria-hidden="true"></canvas>
+<canvas id="burst" aria-hidden="true"></canvas>
+<div id="vignette" aria-hidden="true"></div>
+
+<header id="top">
+  <div class="brand"><span class="wing-slot" id="wingTop"></span><span class="wordmark">Hermes</span></div>
+  <div id="status" class="label">Say “Hey Hermes”</div>
+  <div class="top-right">
+    <div id="timerChips"></div>
+    <span id="net" class="net" title="bridge"></span>
+    <button id="gear" class="icon-btn" aria-label="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>
+    </button>
+  </div>
+</header>
+
+<main>
+  <!-- AMBIENT: clock, weather, agenda -->
+  <section id="ambient" class="view">
+    <div class="col-left">
+      <div id="clock" class="clock"><span id="hh">--</span><span class="colon">:</span><span id="mm">--</span><span id="ampm" class="ampm"></span></div>
+      <div id="date" class="label date">—</div>
+
+      <div id="weather" class="weather">
+        <div class="now">
+          <div id="wxIcon" class="wx-icon"></div>
+          <div class="now-temp"><span id="wxTemp">--</span><span class="deg">°</span></div>
+          <div class="now-desc">
+            <div id="wxDesc" class="wx-desc">—</div>
+            <div id="wxMeta" class="label">—</div>
+          </div>
+        </div>
+        <ol id="hourly" class="hourly"></ol>
+        <ol id="daily" class="daily"></ol>
+      </div>
+    </div>
+
+    <aside class="col-right">
+      <div id="nextUp" class="next-up hidden">
+        <div class="label next-label"><span id="nextWhen">Next</span></div>
+        <div id="nextTitle" class="next-title">—</div>
+        <div id="nextMeta" class="label">—</div>
+      </div>
+      <div class="agenda">
+        <div class="label section">Today<span id="todayCount" class="count"></span></div>
+        <ol id="agendaToday" class="events"></ol>
+        <div class="label section">Tomorrow<span id="tomorrowCount" class="count"></span></div>
+        <ol id="agendaTomorrow" class="events"></ol>
+      </div>
+    </aside>
+  </section>
+
+  <!-- CONVERSATION -->
+  <section id="convo" class="view">
+    <div class="orb-space"><span class="wing-slot orb-wing" id="wingOrb"></span></div>
+    <div class="dialog">
+      <div class="label you-label">You</div>
+      <div id="you" class="you"></div>
+      <div class="label hermes-label">Hermes<span id="elapsed" class="count"></span></div>
+      <div id="speech" class="speech"></div>
+      <article id="card" class="card md hidden"></article>
+      <div id="meta" class="label meta"></div>
+    </div>
+  </section>
+</main>
+
+<footer id="dock">
+  <button id="mic" class="mic" aria-label="Talk to Hermes">
+    <canvas id="miniOrb" width="72" height="72"></canvas>
+  </button>
+  <div class="hint"><span class="label">Say</span><span class="hint-phrase">“Hey Hermes”</span></div>
+  <div id="chips" class="chips"></div>
+</footer>
+
+<!-- Timer ringing -->
+<div id="ring" class="overlay hidden">
+  <div class="ring-rings"><i></i><i></i><i></i></div>
+  <div class="label">Time’s up</div>
+  <div id="ringLabel" class="ring-title">Timer</div>
+  <div class="label ring-hint">Tap anywhere or say “Stop timer”</div>
+</div>
+
+<!-- Night-time sleep clock -->
+<div id="sleep" class="hidden"><div id="sleepClock">--:--</div><div id="sleepNext" class="label"></div></div>
+
+<!-- Settings -->
+<div id="settings" class="sheet hidden">
+  <div class="sheet-inner">
+    <div class="sheet-head"><span class="label">Settings</span><button class="icon-btn" id="closeSettings" aria-label="Close">✕</button></div>
+    <label class="field"><span class="label">Voice key</span><input id="sKey" type="password" autocomplete="off" placeholder="unchanged"></label>
+    <label class="field"><span class="label">Bridge URL</span><input id="sUrl" type="text" autocomplete="off" placeholder="http://192.168.1.50:8650"></label>
+    <label class="field"><span class="label">Wake phrases</span><input id="sWake" type="text" autocomplete="off"></label>
+    <div class="field"><span class="label">Theme</span>
+      <div class="seg" id="sTheme"><button data-v="auto">Auto</button><button data-v="day">Day</button><button data-v="night">Night</button></div>
+    </div>
+    <div class="field"><span class="label">Clock</span>
+      <div class="seg" id="sClock"><button data-v="12">12-hour</button><button data-v="24">24-hour</button></div>
+    </div>
+    <div class="field"><span class="label">Calendar on screen</span>
+      <div class="seg" id="sCal"><button data-v="on">Show</button><button data-v="off">Hide</button></div>
+    </div>
+    <div class="sheet-actions">
+      <button id="saveSettings" class="btn primary">Save</button>
+      <button id="newConvo" class="btn">New conversation</button>
+      <button id="portalSettings" class="btn">Portal settings</button>
+    </div>
+    <div id="about" class="label about"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="wing.js"></script>
+<script src="art.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
