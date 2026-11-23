@@ -21,8 +21,9 @@ Nothing on the Portal is removed or modified. You can go back to Meta's home scr
 
 ## What you need
 
-- **A Meta Portal with ADB turned on.** Built and tested on the Portal 10" (1st gen, Android 9). Other Portals are
-  untested: the layout is made for a 1280×800 screen.
+- **A Meta Portal with ADB turned on.** Built and tested on the Portal 10" (1st gen, Android 9). One user reports it
+  also runs on a 2nd-gen Portal; I haven't tried that myself. Other Portals are untested: the layout is made for a
+  1280×800 screen.
 - **Hermes Agent** running on a computer that stays on (a Mac, a Linux box, a home server or a VPS).
 - On that same computer: **Python 3.10+** and **ffmpeg**.
 - For the one-time install: a **USB-C data cable** and a computer with **adb**
@@ -109,7 +110,8 @@ If the computer has a firewall, allow incoming connections on port 8650 from you
 
 ### Step 3. Turn on ADB on the Portal
 
-1. On the Portal: **Settings → Debug → ADB Enabled**.
+1. On the Portal: **Settings → Debug → ADB Enabled**. No Debug option? It arrives with a software update: put the
+   Portal on Wi-Fi, install any pending updates, and give it a while. [More](docs/portal.md#connecting-adb)
 2. Plug a USB-C **data** cable into the Portal's USB-C port and into your computer.
 3. Tap **Allow USB debugging** on the Portal's screen.
 4. Check the computer sees it:
@@ -197,6 +199,7 @@ Meta's Settings (to check ADB is on, change Wi-Fi and so on).
 
 | What you see | What to do |
 |---|---|
+| No **Debug → ADB Enabled** in the Portal's Settings | The option comes with a software update. Connect to Wi-Fi, install pending updates, then wait: it can take a while to show up after updating. [More](docs/portal.md#connecting-adb) |
 | `adb devices` is empty or says `unauthorized` | Use a data cable, toggle ADB off and on while plugged in, accept the prompt on the Portal. [More](docs/portal.md#connecting-adb) |
 | "Not set up — add the bridge URL in Settings" | Run `./android/install.sh --url …` again, or tap the gear and enter the URL and key |
 | "Voice key rejected" | The key on the Portal doesn't match `PORTAL_VOICE_KEY` in `server/.env`. Re-run the install script |

@@ -22,7 +22,10 @@ SPEAKING  plays the mp3; if the reply ends in "?", the mic re-opens once (no wak
 | WebView | `com.facebook.portal.webview` |
 | No Google services | Android's `SpeechRecognizer` isn't available, so speech-to-text runs on the bridge |
 
-Other Portal models haven't been tried. If you run it on one, an issue or PR with what you found is welcome.
+**Reported working elsewhere:** one user ran this code on a 2nd-gen Portal ("Portal 2.0", exact model not stated) and
+said it worked, the only snag being getting the ADB option to appear (below). That's a single report, not something
+tested here. Other Portal models haven't been tried. If you run it on one, an issue or PR with what you found is
+welcome.
 
 ## Connecting ADB
 
@@ -35,6 +38,10 @@ Other Portal models haven't been tried. If you run it on one, an issue or PR wit
 If the computer sees a "Portal" USB device but `adb devices` is empty, the Portal isn't exposing the ADB interface yet.
 Toggle ADB off and on **while it's plugged in**, replug, and accept the prompt. `unauthorized` means the prompt is
 still waiting on the Portal's screen.
+
+**No Debug / ADB option in Settings at all?** The option comes with a Portal software update, so a device that has
+been in a drawer won't have it yet. Put it on Wi-Fi, install every pending update, then leave it connected for a
+while: on the 2nd-gen Portal above, the option only showed up some time after the updates had finished installing.
 
 Wireless ADB afterwards, until the next reboot: `adb tcpip 5555 && adb connect <portal-ip>:5555`.
 
